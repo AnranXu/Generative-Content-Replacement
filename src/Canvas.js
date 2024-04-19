@@ -22,8 +22,6 @@ class Canvas extends React.Component {
             masks: {},
             mergedMask: [],
             image: null,
-            imageX: 0,
-            imageY: 0,
             imageWidth: 0,
             imageHeight: 0,
             stageWidth: 0, // Example to make it responsive
@@ -66,10 +64,9 @@ class Canvas extends React.Component {
             reader.onload = (event) => {
                 const img = new window.Image();
                 img.onload = () => {
-                    // Calculate maximum dimensions
+                    // Calculate the maximum dimensions based on window size minus UI elements
                     const maxWidth = window.innerWidth - 300; // Adjusted for sidebar
                     const maxHeight = window.innerHeight - 100; // Adjusted for any header/footer
-                    console.log(maxWidth, maxHeight);
     
                     // Calculate scale to ensure image does not exceed max dimensions or scale up
                     const scale = Math.min(
@@ -80,29 +77,35 @@ class Canvas extends React.Component {
     
                     const imageWidth = Math.floor(img.width * scale);
                     const imageHeight = Math.floor(img.height * scale);
-    
-                    // Update the canvas size to match the image size
+                    // get StageX and StageY, that make the stage always in the center
+                    // Update the originalCanvas size to match the image size
                     this.originalCanvas.width = imageWidth;
                     this.originalCanvas.height = imageHeight;
                     const ctx = this.originalCanvas.getContext('2d');
+    
+                    // Draw the resized image onto the originalCanvas
                     ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, imageWidth, imageHeight);
-                    console.log('imageHeight', imageHeight, 'imageWidth', imageWidth);
+    
                     // Create a mask array based on the new image dimensions
                     var mask = Array.from({ length: imageHeight }, () =>
                         new Array(imageWidth).fill(0)
                     );
     
+                    // Extract the new dataURL from the originalCanvas
+                    const newDataURL = this.originalCanvas.toDataURL();
+                    console.log('newDataURL', newDataURL);
                     // Set the state with the new dimensions and image properties
-                    console.log('original size and resized size', img.width, img.height, imageWidth, imageHeight)
                     this.setState({
                         image: img,
+                        imageWidth: imageWidth,
+                        imageHeight: imageHeight,
                         stageWidth: imageWidth, // Set stage size to image size
                         stageHeight: imageHeight,
-                        dataURL: reader.result,
+                        dataURL: newDataURL,
                         mergedMask: mask,
                         masks: {},
                         vertices: {},
-                        maskCenters: {}, 
+                        maskCenters: {},
                         diffusionImages: {},
                         newDiffusion: false,
                         clearFlagDiffusion: true,
@@ -470,7 +473,7 @@ class Canvas extends React.Component {
     }
     
     render() {
-        const { windowSize, isLoading, vertices} = this.state;
+        const { windowSize, isLoading, vertices, stageWidth, stageHeight, imageWidth, imageHeight} = this.state;
     
         return (
             <div
@@ -500,7 +503,13 @@ class Canvas extends React.Component {
                 </div>
                 <div
                     className='edit-cursor'
-                    style={{ flexGrow: 1 }}
+                    style={{ 
+                        flexGrow: 1,
+                        display: 'flex',  // Make this a flex container
+                        justifyContent: 'center',  // Center horizontally
+                        alignItems: 'center',  // Center vertically
+                        height: '100%'  // Take full height of its container
+                    }}
                 >
                     <Stage 
                         width={this.state.stageWidth} 
@@ -518,6 +527,8 @@ class Canvas extends React.Component {
                             {this.state.image && (
                                 <Image
                                     image={this.state.image}  // React Konva's Image expects a DOM image here
+                                    width={imageWidth}  // Match the image's drawn dimensions
+                                    height={imageHeight}
                                 />
                             )}
                         </Layer>

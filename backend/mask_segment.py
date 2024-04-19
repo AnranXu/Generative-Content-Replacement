@@ -66,6 +66,7 @@ class mask_segment:
           point_coords = np.array(point_coords)
         if point_labels is not None:
           point_labels = np.array(point_labels)
+        #print('img shape', img.shape)
         self.predictor.set_image(img)
         #The model can also take a box as input, provided in xyxy format.
         if box is not None and box.shape[0] > 1:

@@ -37,6 +37,9 @@ def create_mask_route():
     img = data['img']
     img = base64.b64decode(img.split(',')[1])
     img = Image.open(BytesIO(img))
+    # Convert RGBA to RGB if necessary
+    if img.mode == 'RGBA':
+        img = img.convert('RGB')
     img = np.array(img)
     masks, scores, logits = DMBIS.mask_predictor.predict_masks_with_sam(img, [[x, y]], [1])
     vertices = DMBIS.mask_predictor.output_polygon(masks, scores)
@@ -56,6 +59,8 @@ def run_stable_diffusion_route():
     img = data['img']
     img = base64.b64decode(img.split(',')[1])
     img = Image.open(BytesIO(img))
+    if img.mode == 'RGBA':
+        img = img.convert('RGB')
     img = np.array(img)
     mask = data['mask']
     mask = np.array(mask)
