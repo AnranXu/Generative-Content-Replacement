@@ -42,8 +42,8 @@ class Canvas extends React.Component {
             diffusionRef: null,
             mosaicResult: null,
             styleResult: null,
-            strength: 1.0,
-            textStrength: 7.5,
+            maskStrengths: {},
+            maskTextStrengths: {},
             prompts: {},
         }
     }
@@ -93,7 +93,7 @@ class Canvas extends React.Component {
     
                     // Extract the new dataURL from the originalCanvas
                     const newDataURL = this.originalCanvas.toDataURL();
-                    console.log('newDataURL', newDataURL);
+                    //console.log('newDataURL', newDataURL);
                     // Set the state with the new dimensions and image properties
                     this.setState({
                         image: img,
@@ -172,38 +172,32 @@ class Canvas extends React.Component {
     }
     
     handleFabClick = (key) => {
-        // Implement the functionality of the floating action button here
-        //console.log('Clicked transformation for mask ' + key);
-        //send the mask to the backend and get the transfomation.
-        //post the mask to backend
         this.setState({ isLoading: true });
         const postData = {
             mask: this.state.masks[key],
             img: this.state.dataURL,
-            strength: this.state.strength,
-            text_strength: this.state.textStrength,
-            prompt: this.state.prompts[key] || '', // Include the prompt
+            strength: this.state.maskStrengths[key],
+            text_strength: this.state.maskTextStrengths[key],
+            prompt: this.state.prompts[key] || '',
         };
         axios.post('http://10.9.5.200:5000/api/run_stable_diffusion', postData)
         .then(response => {
-            console.log('response');
             var diffusionImage = response.data.diffusionImage;
-            //update the diffusionImages
-            var newDiffusionImages = this.state.diffusionImages;
-            newDiffusionImages[key] = diffusionImage;
-            this.setState({
-                diffusionImages: newDiffusionImages,
+            this.setState(prevState => ({
+                diffusionImages: {
+                    ...prevState.diffusionImages,
+                    [key]: diffusionImage
+                },
                 newDiffusion: true,
                 isLoading: false
-            });
+            }));
         })
         .catch(error => {
             console.error('Error diffusion:', error);
-            this.setState({ 
-                isLoading: false 
-            });
+            this.setState({ isLoading: false });
         });
     };
+    
 
     handleResize = () => {
         this.setState({ 
@@ -218,18 +212,16 @@ class Canvas extends React.Component {
         //not in editing mode
         console.log('sending data');
         if(!this.props.visualizeVertices)
-            return
+            return;
         const stage = event.target.getStage();
         const point = stage.getPointerPosition();
-        // Send this point to the backend, and get the initial mask
-        
+    
         //if this point already in the mask area, then do nothing
-
-        if(Object.keys(this.state.masks).length !== 0 && this.state.mergedMask[parseInt(point.y)][parseInt(point.x)] !== 0)
-        {
+        if(Object.keys(this.state.masks).length !== 0 && this.state.mergedMask[parseInt(point.y)][parseInt(point.x)] !== 0) {
             console.log('mask already exist');
             return;
         }
+    
         this.setState({ isLoading: true });
         const postData = {
             point: point,
@@ -237,44 +229,41 @@ class Canvas extends React.Component {
         };
         axios.post('http://10.9.5.200:5000/api/create_mask', postData)
         .then(response => {
-            // get vertices and mask from backend
-            var vertices = response.data.vertices;
-            var mask = response.data.mask;
-            var newMasks = this.state.masks;
-            var newVertices = this.state.vertices;
-            var newKey = 0;
-            if(Object.keys(newMasks).length !== 0)
-            {
-                newKey = Math.max(...Object.keys(newMasks)) + 1;
-            }
+            const { vertices, mask } = response.data;
+            const newMasks = this.state.masks;
+            const newVertices = this.state.vertices;
+            const newKey = Object.keys(newMasks).length ? Math.max(...Object.keys(newMasks).map(k => parseInt(k))) + 1 : 0;
+    
+            // Add default strength and text strength for new mask
+            const newMaskStrengths = {...this.state.maskStrengths, [newKey]: 1.0}; // Default noise strength
+            const newMaskTextStrengths = {...this.state.maskTextStrengths, [newKey]: 7.5}; // Default text strength
+    
             newMasks[newKey] = mask;
             newVertices[newKey] = vertices;
-
-            var mergedMask = this.mergeMask(newMasks);
-
-            //calculate the center for each mask in NewMasks
-            var maskCenter = {};
-            for(var key in newMasks)
-            {
+    
+            const mergedMask = this.mergeMask(newMasks);
+    
+            // Calculate the center for each mask in NewMasks
+            const maskCenter = {};
+            for (const key in newMasks) {
                 maskCenter[key] = this.calculateMaskCenter(newMasks[key]);
             }
+    
             this.setState({
-                vertices: newVertices, 
+                vertices: newVertices,
                 mergedMask: mergedMask,
                 masks: newMasks,
-                isLoading: false,
+                maskStrengths: newMaskStrengths,
+                maskTextStrengths: newMaskTextStrengths,
                 maskCenters: maskCenter,
+                isLoading: false
             });
         })
         .catch(error => {
             console.error('Error creating mask:', error);
-            this.setState({ 
-                isLoading: false 
-            });
+            this.setState({ isLoading: false });
         });
-        // }
-        
-    };
+    };    
     
     handleDragMove = (key, index, event) => {
         this.setState({ isLoading: true });
@@ -419,8 +408,25 @@ class Canvas extends React.Component {
             }
         }));
     }    
+    handleStrengthChange = (key, newValue) => {
+        this.setState(prevState => ({
+            maskStrengths: {
+                ...prevState.maskStrengths,
+                [key]: newValue
+            }
+        }));
+    };
+    
+    handleTextStrengthChange = (key, newValue) => {
+        this.setState(prevState => ({
+            maskTextStrengths: {
+                ...prevState.maskTextStrengths,
+                [key]: newValue
+            }
+        }));
+    };
     Sidebar() {
-        const { masks, strength, textStrength, prompts } = this.state;
+        const { masks, maskStrengths, maskTextStrengths, prompts } = this.state;
         return (
             <div style={{ width: '300px', overflowY: 'auto', height: '100%', background: '#f0f0f0' }}>
                 {Object.entries(masks).map(([key, mask]) => (
@@ -436,26 +442,26 @@ class Canvas extends React.Component {
                         />
                         <Typography gutterBottom>Text Strength</Typography>
                         <Slider
-                            value={textStrength}
+                            value={maskTextStrengths[key]}
                             step={0.5}
                             marks
                             min={1}
                             max={10}
                             valueLabelDisplay="auto"
                             onChange={(event, newValue) => {
-                                this.setState({ textStrength: newValue });
+                                this.handleTextStrengthChange(key, newValue);
                             }}
                         />
                         <Typography gutterBottom>Noise Strength</Typography>
                         <Slider
-                            value={strength}
+                            value={maskStrengths[key]}
                             step={0.1}
                             marks
                             min={0}
                             max={1}
                             valueLabelDisplay="auto"
                             onChange={(event, newValue) => {
-                                this.setState({ strength: newValue });
+                                this.handleStrengthChange(key, newValue);
                             }}
                         />
                         <Stack direction="row" spacing={1}>
@@ -470,7 +476,7 @@ class Canvas extends React.Component {
                 ))}
             </div>
         );
-    }
+    }    
     
     render() {
         const { windowSize, isLoading, vertices, stageWidth, stageHeight, imageWidth, imageHeight} = this.state;
