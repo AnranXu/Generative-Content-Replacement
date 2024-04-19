@@ -1,0 +1,27 @@
+/* In your .css file */
+.spinner {
+    border: 16px solid #f3f3f3; 
+    border-top: 16px solid #3498db; 
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.edit-cursor {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit"><path d="M20.84 4.61a3.023 3.023 0 0 0 0-4.243l-1.171-1.171a3.025 3.025 0 0 0-4.243 0L13.414 2m-1.414 1L20 14v4a2 2 0 0 1-2 2h-4L6 9"></path></svg>') 16 16, crosshair;
+}
+.sidebar {
+    width: 300px;
+    height: 100%;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+    overflow-y: hidden; /* Allow vertical scrolling */
+    background: #f0f0f0;
+}
+
+

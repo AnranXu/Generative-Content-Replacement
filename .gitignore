@@ -1,0 +1,4 @@
+**/.DS_Store
+backend/pretrained_models/*
+node_modules/*
+*.pyc
