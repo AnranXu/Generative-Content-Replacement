@@ -160,10 +160,8 @@ class fill_with_stable_diffusion:
             img: np.ndarray,
             mask: np.ndarray,
             text_prompt: str,
-            gpt_change: bool = True,
             strength: float = 1.0,
             guidance_scale: float = 7.5,
-            use_embedding: bool = False,
             embedding_noise_scale: float = 0.0,
     ):
         width, height = img.shape[1], img.shape[0]
@@ -187,60 +185,16 @@ class fill_with_stable_diffusion:
             # initialize the prompt_embeds as an placeholder of torch.tensor
             prompt_embeds = None
             # has error, not sure what is a proper embedding size for the diffusion model
-            if use_embedding:
-                # get the prompt embedding from object_prompt by using the CLIP model
-                prompt_embeds = self.embedding_processor(text=[object_prompt], images=img_masked, return_tensors="pt", padding=True)
-                # add noise to the prompt embedding according to the embedding_noise_scale
-                # input_ids
-                # Convert tokenized input to device
-                input_ids = prompt_embeds["input_ids"]
-                prompt_embeds = self.embedding_model.get_text_features(input_ids)
-                noise = torch.randn_like(prompt_embeds) * embedding_noise_scale
-                prompt_embeds = prompt_embeds + noise
-                # add the dimension of batch size
-                prompt_embeds = prompt_embeds.unsqueeze(0)
-                # add the object_prompt to the text_prompt
-
-                # generate negative prompt embedding and concatenate with the original prompt
-                negative_prompt = ""
-                negative_prompt_embeds = self.embedding_processor(negative_prompt, return_tensors="pt", padding=True, truncation=True)
-                negative_input_ids = negative_prompt_embeds["input_ids"]
-                negative_prompt_embeds = self.embedding_model.get_text_features(negative_input_ids)
-                negative_prompt_embeds = negative_prompt_embeds.unsqueeze(0)
-                # concatenate the prompt_embeds and negative_prompt_embeds at dim 2
-                prompt_embeds = torch.cat([prompt_embeds, negative_prompt_embeds], dim=2)
-                # copy and repeat the negative prompt to make it dim size of dim 2 double
-                negative_prompt_embeds = negative_prompt_embeds.repeat(1, 1, 2)
-
-                #print dimensions
-                print(prompt_embeds.shape, negative_prompt_embeds.shape)
             text_prompt = object_prompt + ' in the image of' + text_prompt
-            if gpt_change:
-                try:
-                    text_prompt = self.change_prompt(text_prompt)
-                # print error 
-                except:
-                    print('error when changing prompt')
         #img_crop, mask_crop = self.crop_for_filling_pre(img, mask)
         print(img.shape, mask.shape)
-        if use_embedding:
-            img_crop_filled = self.pipe(
-                prompt=None,
-                
-                image=Image.fromarray(img),
-                mask_image=Image.fromarray(mask),
-                strength=strength,
-                guidance_scale=guidance_scale,
-                prompt_embeds=prompt_embeds,
-            ).images[0]
-        else:
-            img_crop_filled = self.pipe(
+        img_crop_filled = self.pipe(
                 prompt=text_prompt,
                 image=Image.fromarray(img),
                 mask_image=Image.fromarray(mask),
                 strength=strength,
                 guidance_scale=guidance_scale,
-            ).images[0]
+        ).images[0]
         # pil to np
         # resize to original size, use pil
         img_crop_filled = img_crop_filled.resize((width, height))
@@ -263,24 +217,6 @@ class fill_with_stable_diffusion:
         print(prompt)
         return prompt
     
-    def change_prompt(
-            self,
-            text_prompt: str):
-        completion = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo", 
-            messages = [{"role": "system", "content" : 'You are helping me to modify the real given text to a similar but fake text for privacy protection. \
-            For example, I give you a sentence saying "mazda mx-5 rear spoiler in the image of a black mazda sports car parked in a parking lot". \
-            You need to merge the repeated or unnatural description, and remain this sentence to a similar context but change the detailed description. \
-            Like "A Honda Civic Type-R with a rear wing in the image of a parking lot.". \
-            You need only to modify the object text but not the contextual (background) text. In this sentence, \
-            parking lot is contextual text and "mazda mx-5 rear spoiler" is the object. \
-            Meanwhile, "a black mazda sports car" is repeated in the sentence, so you need to remove it. \
-            Remember, after "in the image of", you need to only add the contextual text. \
-            Only response me with the modified sentence and do not include any other things in your output.'},
-            {"role": "user", "content" : text_prompt}])
-        responese = completion["choices"][0]["message"]["content"]
-        print('modified prompted by gpt3.5: ', responese)
-        return responese
     def flush(self):
         gc.collect()
         torch.cuda.empty_cache()

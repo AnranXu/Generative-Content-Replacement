@@ -59,7 +59,7 @@ class Canvas extends React.Component {
     }
     componentDidUpdate(prevProps, prevState) {
         // load images
-        if (prevProps.image !== this.props.image) {
+        if (this.props.image && prevProps.image !== this.props.image) {
             const reader = new FileReader();
             reader.onload = (event) => {
                 const img = new window.Image();
@@ -183,13 +183,19 @@ class Canvas extends React.Component {
         axios.post('http://10.9.5.200:5000/api/run_stable_diffusion', postData)
         .then(response => {
             var diffusionImage = response.data.diffusionImage;
+            var prompt = response.data.prompt;
             this.setState(prevState => ({
                 diffusionImages: {
                     ...prevState.diffusionImages,
                     [key]: diffusionImage
                 },
                 newDiffusion: true,
-                isLoading: false
+                isLoading: false,
+                // update prompt
+                prompts: {
+                    ...prevState.prompts,
+                    [key]: prompt
+                }
             }));
         })
         .catch(error => {

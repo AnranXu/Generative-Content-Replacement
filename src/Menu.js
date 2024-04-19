@@ -15,7 +15,12 @@ class Menu extends React.Component {
   }
 
   handleUpload = (event) => {
-    this.props.toolCallback({image: event.target.files[0]});
+      const file = event.target.files[0]; // Get the first file
+      if (file) { // Check if the file is not undefined
+          this.props.toolCallback({ image: file });
+      } else {
+          console.log("No file selected or upload cancelled.");
+      }
   };
 
   handleSwitchChange = (event) => {

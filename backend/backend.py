@@ -65,7 +65,7 @@ def run_stable_diffusion_route():
     mask = data['mask']
     mask = np.array(mask)
     mask = mask.astype(np.uint8)
-    prompt = ''
+    prompt = data['prompt']
     strength = data['strength']
     strength = float(strength)
     text_strength = data['text_strength']
