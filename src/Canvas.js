@@ -39,6 +39,8 @@ class Canvas extends React.Component {
             promptAlignment: {},
             prompts: {},
             expandedMasks: {},
+            manualSelectionActive: false,
+            activeManualSelectionKey: null,
         }
     }
     toolCallback = (childData) =>{
@@ -200,7 +202,12 @@ class Canvas extends React.Component {
             }
         }));
     };
-    
+
+    toggleManualSelection = () => {
+        this.setState(prevState => ({
+            manualSelectionActive: !prevState.manualSelectionActive
+        }));
+    };
     // add listener for mouse click 
     // then send back to backend to get mask and vertices
     // the mask and vertices will be stored and sent to parent component
@@ -212,49 +219,85 @@ class Canvas extends React.Component {
     
         const stage = event.target.getStage();
         const point = stage.getPointerPosition();
+        if (this.state.manualSelectionActive) {
+            let newKey = this.state.activeManualSelectionKey;
+            let isNewMask = false;
     
-        //if this point already in the mask area, then do nothing
-        if (Object.keys(this.state.masks).length !== 0 && this.state.mergedMask[parseInt(point.y)][parseInt(point.x)] !== 0) {
-            console.log('mask already exist');
-            return;
-        }
+            // If there is no active key, create a new one
+            if (newKey === null) {
+                newKey = Object.keys(this.state.masks).length;
+                isNewMask = true;  // This is a flag to indicate it's a new mask session
+                // Initialize default values for new mask
+                this.setState(prevState => ({
+                    activeManualSelectionKey: newKey,
+                    similarity: { ...prevState.similarity, [newKey]: 0.0 },  // Default similarity
+                    promptAlignment: { ...prevState.promptAlignment, [newKey]: 7.5 },  // Default text strength
+                    expandedMasks: { ...prevState.expandedMasks, [newKey]: true }  // Expand new mask in sidebar
+                }));
+            }
     
-        this.setState({ isLoading: true });
-        const postData = {
-            point: point,
-            img: this.state.dataURL
-        };
-        axios.post('http://10.9.5.200:5000/api/create_mask', postData)
-        .then(response => {
-            const { vertices, mask } = response.data;
-            const newMasks = {...this.state.masks}; // Ensure not mutating state directly
-            const newVertices = {...this.state.vertices};
-            const newKey = Object.keys(newMasks).length ? Math.max(...Object.keys(newMasks).map(k => parseInt(k))) + 1 : 0;
+            // Add the new vertex to the existing vertices array for this key, or create a new one
+            const newVertices = {...this.state.vertices, [newKey]: [...(this.state.vertices[newKey] || []), [point.y, point.x]]};
     
-            // Add default strength and text strength for new mask
-            const newSimilarity = {...this.state.similarity, [newKey]: 0.0}; // Default noise strength
-            const newPromptAlignment = {...this.state.promptAlignment, [newKey]: 7.5}; // Default text strength
-            const newExpandedMasks = {...this.state.expandedMasks, [newKey]: true}; // Set new masks to be expanded by default
-    
-            newMasks[newKey] = mask;
-            newVertices[newKey] = vertices;
-    
-            const mergedMask = this.mergeMask(newMasks);
+            // Optionally, update the mask here if you want to dynamically show changes
+            const newMasks = {...this.state.masks, [newKey]: this.generateMask(newVertices[newKey], this.state.stageWidth, this.state.stageHeight)};
     
             this.setState({
                 vertices: newVertices,
-                mergedMask: mergedMask,
                 masks: newMasks,
-                similarity: newSimilarity,
-                promptAlignment: newPromptAlignment,
-                expandedMasks: newExpandedMasks, // Update state with expanded masks info
-                isLoading: false
             });
-        })
-        .catch(error => {
-            console.error('Error creating mask:', error);
-            this.setState({ isLoading: false });
-        });
+    
+            if (isNewMask) {
+                // Ensure the sidebar opens the new mask for editing immediately
+                this.setState(prevState => ({
+                    expandedMasks: {...prevState.expandedMasks, [newKey]: true}
+                }));
+            }
+        }
+        else{
+            //if this point already in the mask area, then do nothing
+            if (Object.keys(this.state.masks).length !== 0 && this.state.mergedMask[parseInt(point.y)][parseInt(point.x)] !== 0) {
+                console.log('mask already exist');
+                return;
+            }
+        
+            this.setState({ isLoading: true });
+            const postData = {
+                point: point,
+                img: this.state.dataURL
+            };
+            axios.post('http://10.9.5.200:5000/api/create_mask', postData)
+            .then(response => {
+                const { vertices, mask } = response.data;
+                const newMasks = {...this.state.masks}; // Ensure not mutating state directly
+                const newVertices = {...this.state.vertices};
+                const newKey = Object.keys(newMasks).length ? Math.max(...Object.keys(newMasks).map(k => parseInt(k))) + 1 : 0;
+        
+                // Add default strength and text strength for new mask
+                const newSimilarity = {...this.state.similarity, [newKey]: 0.0}; // Default noise strength
+                const newPromptAlignment = {...this.state.promptAlignment, [newKey]: 7.5}; // Default text strength
+                const newExpandedMasks = {...this.state.expandedMasks, [newKey]: true}; // Set new masks to be expanded by default
+        
+                newMasks[newKey] = mask;
+                newVertices[newKey] = vertices;
+        
+                const mergedMask = this.mergeMask(newMasks);
+        
+                this.setState({
+                    vertices: newVertices,
+                    mergedMask: mergedMask,
+                    masks: newMasks,
+                    similarity: newSimilarity,
+                    promptAlignment: newPromptAlignment,
+                    expandedMasks: newExpandedMasks, // Update state with expanded masks info
+                    isLoading: false
+                });
+            })
+            .catch(error => {
+                console.error('Error creating mask:', error);
+                this.setState({ isLoading: false });
+            });
+        }
     };
     
     
@@ -274,126 +317,143 @@ class Canvas extends React.Component {
     };
     handleDragEnd = (key, index, event) => {
         this.setState({ isLoading: true });
-        const postData = {
-            vertices: this.state.vertices[key],
-            imageWidth: this.state.image.width,
-            imageHeight: this.state.image.height,
-        }
-        //now, we do this thing locally
-        var mask = this.generateMask(this.state.vertices[key], this.state.image.width, this.state.image.height);
-        //update to the corresponding masks
+        const { imageWidth, imageHeight } = this.state;  // Destructuring for easier access
+    
+        console.log("Image dimensions:", imageWidth, imageHeight); // Log the image dimensions
+    
+        // Ensure the vertices are within the bounds of the image dimensions
+        const adjustedVertices = this.state.vertices[key].map(vertex => [
+            Math.min(Math.max(vertex[0], 0), imageHeight),
+            Math.min(Math.max(vertex[1], 0), imageWidth)
+        ]);
+    
+        console.log("Adjusted vertices:", adjustedVertices); // Log the adjusted vertices
+    
+        var mask = this.generateMask(adjustedVertices, imageWidth, imageHeight);
+    
+        // Update the corresponding masks
         this.setState(prevState => ({
             masks: {
                 ...prevState.masks,
                 [key]: mask,
             },
             isLoading: false
-        }), ()=>{
-            //update the merged mask
+        }), () => {
+            // Update the merged mask
             var mergedMask = this.mergeMask(this.state.masks);
             this.setState({
                 mergedMask: mergedMask
             });
         });
-
+    };    
+    finalizeManualSelection = () => {
+        if (this.state.manualSelectionActive && this.state.activeManualSelectionKey !== null) {
+            // First, update the merged mask to incorporate the changes made during manual selection
+            const newMergedMask = this.mergeMask(this.state.masks);
+    
+            // Turn off manual selection mode and reset the active key
+            this.setState({
+                mergedMask: newMergedMask, // Update the merged mask in state
+                activeManualSelectionKey: null, // Reset the active key
+                manualSelectionActive: false // Ensure manual selection mode is turned off
+            }, () => {
+                // Optionally, you could trigger any further updates or callbacks here
+            });
+        }
     };
     handleDeleteClick = (key) => {
-        const newMasks = { ...this.state.masks };
-        const newVertices = { ...this.state.vertices };
-        const newGCRImages = { ...this.state.GCRImages };
-        const newSimilarity = { ...this.state.similarity };
-        const newPromptAlignment = { ...this.state.promptAlignment };
-    
-        // Deleting the specific mask and related data
+        const { masks, vertices, GCRImages, similarity, promptAlignment, expandedMasks } = this.state;
+        const newMasks = { ...masks };
         delete newMasks[key];
+    
+        const newVertices = { ...vertices };
         delete newVertices[key];
+    
+        const newGCRImages = { ...GCRImages };
         delete newGCRImages[key];
+    
+        const newSimilarity = { ...similarity };
         delete newSimilarity[key];
+    
+        const newPromptAlignment = { ...promptAlignment };
         delete newPromptAlignment[key];
     
-        // Recalculate merged masks
-        const mergedMask = this.mergeMask(newMasks);
-
-        // Update the state with the new object references
+        const newExpandedMasks = { ...expandedMasks };
+        delete newExpandedMasks[key];
+    
+        const newMergedMask = this.mergeMask(newMasks);
+    
         this.setState({
             masks: newMasks,
             vertices: newVertices,
             GCRImages: newGCRImages,
             similarity: newSimilarity,
             promptAlignment: newPromptAlignment,
-            mergedMask: mergedMask,
-            newGCR: true,  // Assuming this is used to trigger some updates elsewhere
+            expandedMasks: newExpandedMasks,
+            mergedMask: newMergedMask
         });
-    };    
+    };     
     generateMask = (vertices, imageWidth, imageHeight) => {
-        function array1DTo2D(arr, imageWidth) {
-            let newArray = [];
-            while(arr.length) newArray.push(arr.splice(0,imageWidth));
-            return newArray;
-        }
+        // Initialize a new mask array with the same dimensions as the image or canvas
+        let mask = Array.from({length: imageHeight}, () => new Array(imageWidth).fill(0));
+    
+        // Example logic for creating a mask based on vertices could be as follows:
         const cv = window.cv;
-        const mat = new cv.Mat(imageHeight, imageWidth, cv.CV_8UC3, new cv.Scalar(0, 0, 0, 0));
-        let data = [];
-        vertices.forEach(v => data.push(v[1], v[0]));
+        const mat = new cv.Mat(imageHeight, imageWidth, cv.CV_8UC3, new cv.Scalar(0, 0, 0, 255));
+        let data = vertices.flatMap(vertex => [vertex[1], vertex[0]]); // Ensure vertices are in the correct format
         let polygon = cv.matFromArray(data.length / 2, 2, cv.CV_32SC1, data);
         const color = new cv.Scalar(255, 255, 255);
         const pointsArray = new cv.MatVector();
         pointsArray.push_back(polygon);
         cv.fillPoly(mat, pointsArray, color);
         cv.cvtColor(mat, mat, cv.COLOR_BGR2GRAY);
-
+    
         let jsArray = Array.from(mat.data);
-
-        // Convert 1D array to 2D array
-        let js2DArray = array1DTo2D(jsArray, imageWidth);
-        
-        //delete the mat and polygon to avoid memory leak
+        let js2DArray = Array.from({length: imageHeight}, () => new Array(imageWidth).fill(0));
+    
+        // Convert 1D mask data to 2D
+        for (let i = 0; i < imageHeight; i++) {
+            for (let j = 0; j < imageWidth; j++) {
+                js2DArray[i][j] = jsArray[i * imageWidth + j];
+            }
+        }
+    
         pointsArray.delete();
         polygon.delete();
         mat.delete();
-
-        return js2DArray; // return the resulting JavaScript array.
-
-    };    
+    
+        return js2DArray;
+    };      
     mergeMask = (masks) => {
-        //initialize the merged mask to be all 0
-
-        let maskArray = Object.values(masks);
-        console.log(masks)
-        // Validate the input
-        
-        if(!Array.isArray(maskArray) || maskArray.length === 0) {
-            console.error('Invalid input. Please provide a non-empty object of masks');
-            return [];
+        // Check if the input masks object is empty
+        if (!masks || Object.keys(masks).length === 0) {
+            console.log('No masks to merge, providing a default empty array.');
+            // Provide a default value that other parts of your application can safely handle.
+            // This could be an empty array or a minimal structure that matches expected mask dimensions.
+            // Example: Assuming a default dimension if absolutely needed (not generally recommended):
+            // return Array.from({ length: defaultHeight }, () => Array(defaultWidth).fill(0));
+    
+            return []; // Safest return for no input data.
         }
-
-        let mergedMask = [];
-        for(let i = 0; i < maskArray[0].length; i++) {
-            let row = [];
-            for(let j = 0; j < maskArray[0][i].length; j++) {
-                row.push(0);
-            }
-            mergedMask.push(row);
-        }
-        // Initialize the merged mask
-        // Merge the masks
-        for(let mask of maskArray) {
-            if(mask.length !== mergedMask.length || mask[0].length !== mergedMask[0].length) {
-                console.error('All masks must be of the same size');
-                return;
-            }
-
-            for(let i = 0; i < mask.length; i++) {
-                for(let j = 0; j < mask[i].length; j++) {
-                    if(mask[i][j] !== 0) {
+    
+        // Initialization based on the first mask entry
+        let firstKey = Object.keys(masks)[0];
+        let firstMask = masks[firstKey];
+        let mergedMask = Array.from({ length: firstMask.length }, () => new Array(firstMask[0].length).fill(0));
+    
+        Object.values(masks).forEach(mask => {
+            for (let i = 0; i < mask.length; i++) {
+                for (let j = 0; j < mask[i].length; j++) {
+                    if (mask[i][j] !== 0) {
                         mergedMask[i][j] = 255;
                     }
                 }
             }
-        }
-
+        });
+    
         return mergedMask;
-    }
+    };
+    
     handlePromptChange(key, value) {
         this.setState(prevState => ({
             prompts: {
@@ -420,11 +480,25 @@ class Canvas extends React.Component {
         }));
     };
     Sidebar() {
-        const { masks, similarity, promptAlignment, prompts, expandedMasks } = this.state;
+        const { masks, similarity, promptAlignment, prompts, expandedMasks, manualSelectionActive } = this.state;
         return (
             <div style={{ width: '300px', overflowY: 'auto', overflowX: 'hidden', height: '100%', background: '#f0f0f0' }}>
+                <Button
+                    variant="contained"
+                    color={manualSelectionActive ? "secondary" : "primary"}
+                    onClick={() => {
+                        if (manualSelectionActive) {
+                            this.finalizeManualSelection();
+                        } else {
+                            this.toggleManualSelection();
+                        }
+                    }}
+                    style={{ margin: '10px' }}
+                >
+                    {manualSelectionActive ? "Finalize Selection" : "Start Manual Selection"}
+                </Button>
                 {Object.entries(masks).map(([key, mask]) => (
-                    <div key={key} style={{ padding: '10px', borderBottom: '1px solid #ccc' }}>
+                    <div key={key} style={{ padding: '10px', borderBottom: '1px solid #ccc', pointerEvents: manualSelectionActive ? 'none' : 'auto', opacity: manualSelectionActive ? 0.5 : 1 }}>
                         <div onClick={() => this.toggleMaskExpansion(key)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                             <Typography variant="h6" style={{ flexGrow: 1 }}>Edit {Number(key) + 1}</Typography>
                             {expandedMasks[key] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
@@ -465,7 +539,7 @@ class Canvas extends React.Component {
                                         this.handleStrengthChange(key, newValue);
                                     }}
                                 />
-                                <Stack direction="row" justifyContent="space-around" alignItems="center" spacing={5}>
+                                <Stack direction="row" justifyContent="space-around" alignItems="center" spacing={3}>
                                     <Button
                                         variant="contained"
                                         color="primary"
