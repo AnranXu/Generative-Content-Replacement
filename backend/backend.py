@@ -53,8 +53,8 @@ def create_mask_route():
     }
     return jsonify(send_file)
 
-@app.route('/api/run_stable_diffusion', methods=['POST'])
-def run_stable_diffusion_route():
+@app.route('/api/run_GCR', methods=['POST'])
+def run_GCR_route():
     data = request.get_json()
     img = data['img']
     img = base64.b64decode(img.split(',')[1])
@@ -79,7 +79,7 @@ def run_stable_diffusion_route():
     # img_filled = base64.b64encode(buffered.getvalue()).decode('utf-8')
     # send image_filled and vertices to frontend
     send_file = {
-        'diffusionImage': img_filled.tolist(),
+        'GCRImage': img_filled.tolist(),
         'prompt': prompt,
     }
     return jsonify(send_file)

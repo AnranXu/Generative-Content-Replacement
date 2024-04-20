@@ -12,7 +12,7 @@ export const addResizeListener = (callback) => {
 export const removeResizeListener = (callback) => {
     window.removeEventListener("resize", callback);
 };
-export const getDiffusionImage = (originalImage, diffusionImages, masks, width, height) => {
+export const getGCRImage = (originalImage, GCRImages, masks, width, height) => {
     // create a canvas 
     var canvas = document.createElement('canvas');
     canvas.width = width;
@@ -23,10 +23,10 @@ export const getDiffusionImage = (originalImage, diffusionImages, masks, width, 
     // get the image data of original image
     // Iterate over each mask.
     for(let maskKey in masks) {
-      //mask sure that the mask key is in the diffusionImages
-      if (diffusionImages.hasOwnProperty(maskKey)) {
+      //mask sure that the mask key is in the GCRImages
+      if (GCRImages.hasOwnProperty(maskKey)) {
         let mask = masks[maskKey];
-        let diffusionImage = diffusionImages[maskKey];
+        let GCRImage = GCRImages[maskKey];
         
         // Iterate over each pixel.
         for (let y = 0; y < height; y += 1) {
@@ -34,9 +34,9 @@ export const getDiffusionImage = (originalImage, diffusionImages, masks, width, 
             // Check if the mask at this point is set.
             if (mask[y][x] === 255) {
                 // Get the top left pixel color
-                let r = diffusionImage[y][x][0];
-                let g = diffusionImage[y][x][1];
-                let b = diffusionImage[y][x][2];
+                let r = GCRImage[y][x][0];
+                let g = GCRImage[y][x][1];
+                let b = GCRImage[y][x][2];
                 ctx.clearRect(x, y, 1, 1);
                 // Apply the top left pixel color to each pixel in the mosaic block.
                 ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${1})`;
@@ -49,5 +49,4 @@ export const getDiffusionImage = (originalImage, diffusionImages, masks, width, 
     }
     return canvas;
 }
-
 

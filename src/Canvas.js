@@ -1,11 +1,13 @@
 import React from 'react';
 import { Stage, Layer, Image, Circle, Line } from 'react-konva';
-import { getWindowSize, addResizeListener, removeResizeListener, getDiffusionImage} from './utils';
+import { getWindowSize, addResizeListener, removeResizeListener, getGCRImage} from './utils';
 import axios from 'axios';
 import { Stack } from "@mui/material";
-import { Typography, Slider, Fab, TextField} from '@material-ui/core';
-import { Edit as EditIcon} from '@material-ui/icons';
-import { Delete as DeleteIcon } from '@material-ui/icons';
+import { Typography, Slider, TextField, Button, Tooltip} from '@material-ui/core';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import LoadingSpinner from './component/loading/LoadingSpinner';
 import './Canvas.css';
 class Canvas extends React.Component {
@@ -29,22 +31,14 @@ class Canvas extends React.Component {
             dataURL: null,
             clickPoint: [],
             isLoading: false,
-            maskCenters: {}, 
-            diffusionImages: {},
-            newDiffusion: false,
-            newMosaic: false,
-            styleImages: {},
-            styleName: 'abstract',
-            newStyle: false,   
-            clearFlagDiffusion: false,
+            GCRImages: {},
+            newGCR: false,
+            clearFlagGCR: false,
             cleanCanvas: false,
-            diffusionResult: null,
-            diffusionRef: null,
-            mosaicResult: null,
-            styleResult: null,
-            maskStrengths: {},
-            maskTextStrengths: {},
+            similarity: {},
+            promptAlignment: {},
             prompts: {},
+            expandedMasks: {},
         }
     }
     toolCallback = (childData) =>{
@@ -105,10 +99,9 @@ class Canvas extends React.Component {
                         mergedMask: mask,
                         masks: {},
                         vertices: {},
-                        maskCenters: {},
-                        diffusionImages: {},
-                        newDiffusion: false,
-                        clearFlagDiffusion: true,
+                        GCRImages: {},
+                        newGCR: false,
+                        clearFlagGCR: true,
                     }, () => {
                         this.props.toolCallback({
                             firstImage: true,
@@ -120,15 +113,15 @@ class Canvas extends React.Component {
             reader.readAsDataURL(this.props.image);
         }
         //clean the canvas when an photo finish editing
-        if(prevState.newDiffusion !== this.state.newDiffusion && this.state.newDiffusion) {
+        if(prevState.newGCR !== this.state.newGCR && this.state.newGCR) {
             var originalImage = this.originalCanvas;
-            var diffusionCanvas = getDiffusionImage(originalImage, this.state.diffusionImages, this.state.masks, this.state.stageWidth, this.state.stageHeight);
+            var GCRCanvas = getGCRImage(originalImage, this.state.GCRImages, this.state.masks, this.state.stageWidth, this.state.stageHeight);
             //copy it to this.layerRef
             var canvas = this.layerRef.current.canvas._canvas;
             var ctx = canvas.getContext('2d');
-            ctx.drawImage(diffusionCanvas, 0, 0, diffusionCanvas.width, diffusionCanvas.height, 0, 0, this.state.stageWidth, this.state.stageHeight);
+            ctx.drawImage(GCRCanvas, 0, 0, GCRCanvas.width, GCRCanvas.height, 0, 0, this.state.stageWidth, this.state.stageHeight);
             this.setState({
-                newDiffusion: false,
+                newGCR: false,
             });
         }
         if(prevState.cleanCanvas !== this.state.cleanCanvas && this.state.cleanCanvas)
@@ -141,34 +134,22 @@ class Canvas extends React.Component {
                 cleanCanvas: false,
                 masks: {},
                 vertices: {},
-                maskCenters: {}, 
-                diffusionImages: {},
-                clearFlagDiffusion: true,
+                GCRImages: {},
+                clearFlagGCR: true,
             });
         }
-    }
+        if (prevProps.download !== this.props.download && this.props.download) {
+            // Code to handle the download
+            var originalImage = this.originalCanvas;
+            var GCRCanvas = getGCRImage(originalImage, this.state.GCRImages, this.state.masks, this.state.stageWidth, this.state.stageHeight);
+            // download the canvas
 
-    calculateMaskCenter(mask) {
-        let xSum = 0;
-        let ySum = 0;
-        let count = 0;
-        let miny = 100000;
-        //for y axis, calculate its top
-        for (let i = 0; i < mask.length; i++) {
-            for (let j = 0; j < mask[i].length; j++) {
-                if (mask[i][j] !== 0) {
-                    ySum += i;
-                    xSum += j;
-                    count += 1;
-                    if(i < miny)
-                    {
-                        miny = i;
-                    }
-                }
-            }
+            var link = document.createElement('a');
+            link.download = 'GCR_edited.png';
+            link.href = GCRCanvas.toDataURL();
+            link.click();
+            this.props.toolCallback({ download: false });
         }
-        
-        return count === 0 ? null : {x: xSum / count, y: miny};
     }
     
     handleFabClick = (key) => {
@@ -176,20 +157,20 @@ class Canvas extends React.Component {
         const postData = {
             mask: this.state.masks[key],
             img: this.state.dataURL,
-            strength: this.state.maskStrengths[key],
-            text_strength: this.state.maskTextStrengths[key],
+            strength: 1.0 - this.state.similarity[key],
+            text_strength: this.state.promptAlignment[key],
             prompt: this.state.prompts[key] || '',
         };
-        axios.post('http://10.9.5.200:5000/api/run_stable_diffusion', postData)
+        axios.post('http://10.9.5.200:5000/api/run_GCR', postData)
         .then(response => {
-            var diffusionImage = response.data.diffusionImage;
+            var GCRImage = response.data.GCRImage;
             var prompt = response.data.prompt;
             this.setState(prevState => ({
-                diffusionImages: {
-                    ...prevState.diffusionImages,
-                    [key]: diffusionImage
+                GCRImages: {
+                    ...prevState.GCRImages,
+                    [key]: GCRImage
                 },
-                newDiffusion: true,
+                newGCR: true,
                 isLoading: false,
                 // update prompt
                 prompts: {
@@ -199,7 +180,7 @@ class Canvas extends React.Component {
             }));
         })
         .catch(error => {
-            console.error('Error diffusion:', error);
+            console.error('Error GCR:', error);
             this.setState({ isLoading: false });
         });
     };
@@ -210,20 +191,30 @@ class Canvas extends React.Component {
             windowSize: getWindowSize(),
     });
     }
-
+    
+    toggleMaskExpansion = (key) => {
+        this.setState(prevState => ({
+            expandedMasks: {
+                ...prevState.expandedMasks,
+                [key]: !prevState.expandedMasks[key] // Toggle the state
+            }
+        }));
+    };
+    
     // add listener for mouse click 
     // then send back to backend to get mask and vertices
     // the mask and vertices will be stored and sent to parent component
     handleStageClick = (event) => {
         //not in editing mode
         console.log('sending data');
-        if(!this.props.visualizeVertices)
+        if (!this.props.visualizeVertices)
             return;
+    
         const stage = event.target.getStage();
         const point = stage.getPointerPosition();
     
         //if this point already in the mask area, then do nothing
-        if(Object.keys(this.state.masks).length !== 0 && this.state.mergedMask[parseInt(point.y)][parseInt(point.x)] !== 0) {
+        if (Object.keys(this.state.masks).length !== 0 && this.state.mergedMask[parseInt(point.y)][parseInt(point.x)] !== 0) {
             console.log('mask already exist');
             return;
         }
@@ -236,32 +227,27 @@ class Canvas extends React.Component {
         axios.post('http://10.9.5.200:5000/api/create_mask', postData)
         .then(response => {
             const { vertices, mask } = response.data;
-            const newMasks = this.state.masks;
-            const newVertices = this.state.vertices;
+            const newMasks = {...this.state.masks}; // Ensure not mutating state directly
+            const newVertices = {...this.state.vertices};
             const newKey = Object.keys(newMasks).length ? Math.max(...Object.keys(newMasks).map(k => parseInt(k))) + 1 : 0;
     
             // Add default strength and text strength for new mask
-            const newMaskStrengths = {...this.state.maskStrengths, [newKey]: 1.0}; // Default noise strength
-            const newMaskTextStrengths = {...this.state.maskTextStrengths, [newKey]: 7.5}; // Default text strength
+            const newSimilarity = {...this.state.similarity, [newKey]: 0.0}; // Default noise strength
+            const newPromptAlignment = {...this.state.promptAlignment, [newKey]: 7.5}; // Default text strength
+            const newExpandedMasks = {...this.state.expandedMasks, [newKey]: true}; // Set new masks to be expanded by default
     
             newMasks[newKey] = mask;
             newVertices[newKey] = vertices;
     
             const mergedMask = this.mergeMask(newMasks);
     
-            // Calculate the center for each mask in NewMasks
-            const maskCenter = {};
-            for (const key in newMasks) {
-                maskCenter[key] = this.calculateMaskCenter(newMasks[key]);
-            }
-    
             this.setState({
                 vertices: newVertices,
                 mergedMask: mergedMask,
                 masks: newMasks,
-                maskStrengths: newMaskStrengths,
-                maskTextStrengths: newMaskTextStrengths,
-                maskCenters: maskCenter,
+                similarity: newSimilarity,
+                promptAlignment: newPromptAlignment,
+                expandedMasks: newExpandedMasks, // Update state with expanded masks info
                 isLoading: false
             });
         })
@@ -269,7 +255,8 @@ class Canvas extends React.Component {
             console.error('Error creating mask:', error);
             this.setState({ isLoading: false });
         });
-    };    
+    };
+    
     
     handleDragMove = (key, index, event) => {
         this.setState({ isLoading: true });
@@ -311,32 +298,33 @@ class Canvas extends React.Component {
 
     };
     handleDeleteClick = (key) => {
-        const newMasks = this.state.masks;
-        delete newMasks[key];
-        const newVertices = this.state.vertices;
-        delete newVertices[key];
-        var newDiffusionImages = this.state.diffusionImages;
-        delete newDiffusionImages[key];
+        const newMasks = { ...this.state.masks };
+        const newVertices = { ...this.state.vertices };
+        const newGCRImages = { ...this.state.GCRImages };
+        const newSimilarity = { ...this.state.similarity };
+        const newPromptAlignment = { ...this.state.promptAlignment };
     
+        // Deleting the specific mask and related data
+        delete newMasks[key];
+        delete newVertices[key];
+        delete newGCRImages[key];
+        delete newSimilarity[key];
+        delete newPromptAlignment[key];
+    
+        // Recalculate merged masks
         const mergedMask = this.mergeMask(newMasks);
-        
-        //Recalculate maskCenters
-        var maskCenter = {};
-        for(var key in newMasks)
-        {
-            maskCenter[key] = this.calculateMaskCenter(newMasks[key]);
-        }
+
+        // Update the state with the new object references
         this.setState({
             masks: newMasks,
             vertices: newVertices,
-            diffusionImages: newDiffusionImages,
+            GCRImages: newGCRImages,
+            similarity: newSimilarity,
+            promptAlignment: newPromptAlignment,
             mergedMask: mergedMask,
-            maskCenters: maskCenter,
-            newDiffusion: true,
+            newGCR: true,  // Assuming this is used to trigger some updates elsewhere
         });
-        
-        
-    };
+    };    
     generateMask = (vertices, imageWidth, imageHeight) => {
         function array1DTo2D(arr, imageWidth) {
             let newArray = [];
@@ -416,8 +404,8 @@ class Canvas extends React.Component {
     }    
     handleStrengthChange = (key, newValue) => {
         this.setState(prevState => ({
-            maskStrengths: {
-                ...prevState.maskStrengths,
+            similarity: {
+                ...prevState.similarity,
                 [key]: newValue
             }
         }));
@@ -425,65 +413,83 @@ class Canvas extends React.Component {
     
     handleTextStrengthChange = (key, newValue) => {
         this.setState(prevState => ({
-            maskTextStrengths: {
-                ...prevState.maskTextStrengths,
+            promptAlignment: {
+                ...prevState.promptAlignment,
                 [key]: newValue
             }
         }));
     };
     Sidebar() {
-        const { masks, maskStrengths, maskTextStrengths, prompts } = this.state;
+        const { masks, similarity, promptAlignment, prompts, expandedMasks } = this.state;
         return (
-            <div style={{ width: '300px', overflowY: 'auto', height: '100%', background: '#f0f0f0' }}>
+            <div style={{ width: '300px', overflowY: 'auto', overflowX: 'hidden', height: '100%', background: '#f0f0f0' }}>
                 {Object.entries(masks).map(([key, mask]) => (
                     <div key={key} style={{ padding: '10px', borderBottom: '1px solid #ccc' }}>
-                        <Typography variant="h6">Mask {key}</Typography>
-                        <TextField
-                            label="Textual Prompt"
-                            variant="outlined"
-                            fullWidth
-                            value={prompts[key] || ''}
-                            onChange={(event) => this.handlePromptChange(key, event.target.value)}
-                            margin="normal"
-                        />
-                        <Typography gutterBottom>Text Strength</Typography>
-                        <Slider
-                            value={maskTextStrengths[key]}
-                            step={0.5}
-                            marks
-                            min={1}
-                            max={10}
-                            valueLabelDisplay="auto"
-                            onChange={(event, newValue) => {
-                                this.handleTextStrengthChange(key, newValue);
-                            }}
-                        />
-                        <Typography gutterBottom>Noise Strength</Typography>
-                        <Slider
-                            value={maskStrengths[key]}
-                            step={0.1}
-                            marks
-                            min={0}
-                            max={1}
-                            valueLabelDisplay="auto"
-                            onChange={(event, newValue) => {
-                                this.handleStrengthChange(key, newValue);
-                            }}
-                        />
-                        <Stack direction="row" spacing={1}>
-                            <Fab color="primary" size="small" onClick={() => this.handleFabClick(key)}>
-                                <EditIcon />
-                            </Fab>
-                            <Fab color="secondary" size="small" onClick={() => this.handleDeleteClick(key)}>
-                                <DeleteIcon />
-                            </Fab>
-                        </Stack>
+                        <div onClick={() => this.toggleMaskExpansion(key)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                            <Typography variant="h6" style={{ flexGrow: 1 }}>Edit {Number(key) + 1}</Typography>
+                            {expandedMasks[key] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        </div>
+                        {expandedMasks[key] && (
+                            <div>
+                                <Tooltip title="Leave Blank For Automatic Prompt" placement="top" arrow>
+                                <TextField
+                                    label="Textual Prompt"
+                                    variant="outlined"
+                                    fullWidth
+                                    value={prompts[key] || ''}
+                                    onChange={(event) => this.handlePromptChange(key, event.target.value)}
+                                    margin="normal"
+                                />
+                                </Tooltip>
+                                <Typography gutterBottom>Prompt Alignment</Typography>
+                                <Slider
+                                    value={promptAlignment[key] || 7.5}
+                                    step={0.5}
+                                    marks
+                                    min={1}
+                                    max={10}
+                                    valueLabelDisplay="auto"
+                                    onChange={(event, newValue) => {
+                                        this.handleTextStrengthChange(key, newValue);
+                                    }}
+                                />
+                                <Typography gutterBottom>Similarity To The Original Image</Typography>
+                                <Slider
+                                    value={similarity[key] || 0.0}
+                                    step={0.1}
+                                    marks
+                                    min={0}
+                                    max={1}
+                                    valueLabelDisplay="auto"
+                                    onChange={(event, newValue) => {
+                                        this.handleStrengthChange(key, newValue);
+                                    }}
+                                />
+                                <Stack direction="row" justifyContent="space-around" alignItems="center" spacing={5}>
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        startIcon={<EditIcon />}
+                                        onClick={() => this.handleFabClick(key)}
+                                    >
+                                        GCR Edit
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        color="secondary"
+                                        startIcon={<DeleteIcon />}
+                                        onClick={() => this.handleDeleteClick(key)}
+                                    >
+                                        Delete
+                                    </Button>
+                                </Stack>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
         );
     }    
-    
     render() {
         const { windowSize, isLoading, vertices, stageWidth, stageHeight, imageWidth, imageHeight} = this.state;
     

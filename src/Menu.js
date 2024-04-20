@@ -1,66 +1,51 @@
-import React from "react";
-import { IconButton, Switch, FormControlLabel} from "@material-ui/core";
-import CheckIcon from '@mui/icons-material/Check';
+import { IconButton, Switch, FormControlLabel } from "@material-ui/core";
+import { UploadFile as UploadFileIcon, Download as DownloadIcon } from '@mui/icons-material';
 import { Stack } from "@mui/material";
+import React from 'react';
+
 class Menu extends React.Component {
-  
   constructor(props) {
     super(props);
-    //load icons 
-    this.uploadIcon = require('./assets/upload.svg');
-    
     this.state = {
       showVerticesAndLines: true,
     };
   }
 
   handleUpload = (event) => {
-      const file = event.target.files[0]; // Get the first file
-      if (file) { // Check if the file is not undefined
-          this.props.toolCallback({ image: file });
-      } else {
-          console.log("No file selected or upload cancelled.");
-      }
+    const file = event.target.files[0];
+    if (file) {
+      this.props.toolCallback({ image: file });
+    } else {
+      console.log("No file selected or upload cancelled.");
+    }
   };
 
   handleSwitchChange = (event) => {
-    this.setState({showVerticesAndLines: event.target.checked});
-    //change the cursor of .edit-cursor class to normal if the switch is off
-    //save the old cursor and restore it when the switch is on
-    
-    if(!event.target.checked){
-      this.editCrusor = document.querySelector('.edit-cursor').style.cursor;
+    this.setState({ showVerticesAndLines: event.target.checked });
+    if (!event.target.checked) {
+      this.editCursor = document.querySelector('.edit-cursor').style.cursor;
       document.querySelector('.edit-cursor').style.cursor = 'default';
-    }else{
-      document.querySelector('.edit-cursor').style.cursor = this.editCrusor;
+    } else {
+      document.querySelector('.edit-cursor').style.cursor = this.editCursor;
     }
-
-    this.props.toolCallback({
-      visualizeVertices: event.target.checked
-    });
+    this.props.toolCallback({ visualizeVertices: event.target.checked });
   };
 
+  handleDownload = () => {
+    this.props.toolCallback({ download: true });
+  };
 
   render() {
     return (
-      <div
-        height={100} 
-        style={{ 
-        display: 'flex', 
-        justifyContent: 'space-around', 
-        alignItems: 'center', 
-        padding: '10px'}}>
-          <Stack
-            direction="row"
-            justifyContent="space-around"
-            alignItems="center"
-            spacing={10} // adjust this value for the desired distance
-          >
+      <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '10px' }}>
+        <Stack direction="row" justifyContent="space-around" alignItems="center" spacing={10}>
           <div>
-              <input type="file" id="upload" onChange={this.handleUpload} style={{ display: 'none' }} />
-              <label htmlFor="upload">
-                  <img src={this.uploadIcon.default} alt="Upload" />
-              </label>
+            <input type="file" id="upload" onChange={this.handleUpload} style={{ display: 'none' }} />
+            <label htmlFor="upload">
+              <IconButton color="primary" component="span" style={{ fontSize: 'large' }}>
+                <UploadFileIcon fontSize="large" />
+              </IconButton>
+            </label>
           </div>
           <div>
             <FormControlLabel
@@ -75,12 +60,15 @@ class Menu extends React.Component {
             />
           </div>
           <div>
-            
+            <IconButton onClick={this.handleDownload} color="primary" style={{ fontSize: 'large' }}>
+              <DownloadIcon fontSize="large" />
+            </IconButton>
           </div>
-          </Stack>
+        </Stack>
       </div>
     );
   }
 }
 
 export default Menu;
+

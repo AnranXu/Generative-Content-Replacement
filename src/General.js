@@ -9,6 +9,7 @@ class General extends Component {
             image: null,
             visualizeVertices: true,
             firstImage: false,
+            download: false,
         }
     }
     toolCallback = (childData) =>{
@@ -27,6 +28,7 @@ class General extends Component {
                     toolCallback={this.toolCallback}
                     image = {this.state.image}
                     visualizeVertices = {this.state.visualizeVertices}
+                    download = {this.state.download}
                 >
 
                 </Canvas>
