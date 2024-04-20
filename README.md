@@ -4,7 +4,7 @@ For details of GCR, CHI 2024 paper "Examining Human Perception of Generative Con
 
 ## Getting started
 ### 1. Prerequisite 
-A GPU with >24Gb VRAM, 32Gb DRAM
+A GPU with >24Gb VRAM, 32Gb DRAM, 100Gb Storage
 Nodejs, Anaconda
 ### 2. Installation
 ```bash
@@ -16,8 +16,18 @@ npm install
 ```bash
 cd Generative-Content-Replacement
 conda create -n GCR python=3.10
+conda activate GCR
 pip install -r requirements.txt
 conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
 ```
 ### 3. Setting A Development Server To Try GCR
 **Please do not deploy the code to any public servers. We do not ensure the security of the code.**
+Turn on one bash for the backend
+```bash
+cd backend
+python backend.py
+```
+Turn on another bash for the frontend
+```bash
+npm run start
+```

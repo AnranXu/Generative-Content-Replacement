@@ -21,7 +21,7 @@ class General extends Component {
             <div
                 id="general"
                 style={{
-                    backgroundColor: '#f5f5f5',
+                    backgroundColor: '#f0f0f0',
                 }}
             >
                 <Canvas 

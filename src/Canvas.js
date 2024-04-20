@@ -10,6 +10,16 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LoadingSpinner from './component/loading/LoadingSpinner';
 import './Canvas.css';
+const vertexColors = [
+    '#FF5733', // Red
+    '#33FF57', // Green
+    '#3357FF', // Blue
+    '#FFFF33', // Yellow
+    '#FF33FF', // Magenta
+    '#33FFFF', // Cyan
+    // Add more colors as needed
+];
+
 class Canvas extends React.Component {
     //initialize the class
     constructor(props) {
@@ -39,6 +49,7 @@ class Canvas extends React.Component {
             promptAlignment: {},
             prompts: {},
             expandedMasks: {},
+            maskColors: {},
             manualSelectionActive: false,
             activeManualSelectionKey: null,
         }
@@ -102,6 +113,7 @@ class Canvas extends React.Component {
                         masks: {},
                         vertices: {},
                         GCRImages: {},
+                        maskColors: {},
                         newGCR: false,
                         clearFlagGCR: true,
                     }, () => {
@@ -137,6 +149,7 @@ class Canvas extends React.Component {
                 masks: {},
                 vertices: {},
                 GCRImages: {},
+                maskColors: {},
                 clearFlagGCR: true,
             });
         }
@@ -205,9 +218,12 @@ class Canvas extends React.Component {
 
     toggleManualSelection = () => {
         this.setState(prevState => ({
-            manualSelectionActive: !prevState.manualSelectionActive
+            manualSelectionActive: !prevState.manualSelectionActive,
+            // Reset active key only if turning off manual selection
+            activeManualSelectionKey: prevState.manualSelectionActive ? null : prevState.activeManualSelectionKey
         }));
     };
+    
     // add listener for mouse click 
     // then send back to backend to get mask and vertices
     // the mask and vertices will be stored and sent to parent component
@@ -228,8 +244,11 @@ class Canvas extends React.Component {
                 newKey = Object.keys(this.state.masks).length;
                 isNewMask = true;  // This is a flag to indicate it's a new mask session
                 // Initialize default values for new mask
+                const colorIndex = newKey % vertexColors.length; // Cycle through colors
+                console.log('colorIndex', colorIndex, vertexColors[colorIndex]);
                 this.setState(prevState => ({
                     activeManualSelectionKey: newKey,
+                    maskColors: { ...prevState.maskColors, [newKey]: vertexColors[colorIndex] },  // Assign a color to the new mask
                     similarity: { ...prevState.similarity, [newKey]: 0.0 },  // Default similarity
                     promptAlignment: { ...prevState.promptAlignment, [newKey]: 7.5 },  // Default text strength
                     expandedMasks: { ...prevState.expandedMasks, [newKey]: true }  // Expand new mask in sidebar
@@ -272,12 +291,12 @@ class Canvas extends React.Component {
                 const newMasks = {...this.state.masks}; // Ensure not mutating state directly
                 const newVertices = {...this.state.vertices};
                 const newKey = Object.keys(newMasks).length ? Math.max(...Object.keys(newMasks).map(k => parseInt(k))) + 1 : 0;
-        
+                const colorIndex = newKey % vertexColors.length; // Assign colors cyclically from vertexColors
                 // Add default strength and text strength for new mask
                 const newSimilarity = {...this.state.similarity, [newKey]: 0.0}; // Default noise strength
                 const newPromptAlignment = {...this.state.promptAlignment, [newKey]: 7.5}; // Default text strength
                 const newExpandedMasks = {...this.state.expandedMasks, [newKey]: true}; // Set new masks to be expanded by default
-        
+                const newMaskColors = {...this.state.maskColors, [newKey]: vertexColors[colorIndex]};
                 newMasks[newKey] = mask;
                 newVertices[newKey] = vertices;
         
@@ -290,6 +309,7 @@ class Canvas extends React.Component {
                     similarity: newSimilarity,
                     promptAlignment: newPromptAlignment,
                     expandedMasks: newExpandedMasks, // Update state with expanded masks info
+                    maskColors: newMaskColors,
                     isLoading: false
                 });
             })
@@ -347,20 +367,23 @@ class Canvas extends React.Component {
         });
     };    
     finalizeManualSelection = () => {
-        if (this.state.manualSelectionActive && this.state.activeManualSelectionKey !== null) {
-            // First, update the merged mask to incorporate the changes made during manual selection
-            const newMergedMask = this.mergeMask(this.state.masks);
+        if (this.state.manualSelectionActive) {
+            if (this.state.activeManualSelectionKey !== null && (this.state.vertices[this.state.activeManualSelectionKey] || []).length > 0) {
+                // First, update the merged mask to incorporate the changes made during manual selection
+                const newMergedMask = this.mergeMask(this.state.masks);
     
-            // Turn off manual selection mode and reset the active key
+                this.setState({
+                    mergedMask: newMergedMask, // Update the merged mask in state
+                });
+            }
+            
+            // Turn off manual selection mode and reset the active key regardless of vertices presence
             this.setState({
-                mergedMask: newMergedMask, // Update the merged mask in state
                 activeManualSelectionKey: null, // Reset the active key
                 manualSelectionActive: false // Ensure manual selection mode is turned off
-            }, () => {
-                // Optionally, you could trigger any further updates or callbacks here
             });
         }
-    };
+    };    
     handleDeleteClick = (key) => {
         const { masks, vertices, GCRImages, similarity, promptAlignment, expandedMasks } = this.state;
         const newMasks = { ...masks };
@@ -480,7 +503,7 @@ class Canvas extends React.Component {
         }));
     };
     Sidebar() {
-        const { masks, similarity, promptAlignment, prompts, expandedMasks, manualSelectionActive } = this.state;
+        const { masks, similarity, promptAlignment, prompts, expandedMasks, manualSelectionActive, maskColors} = this.state;
         return (
             <div style={{ width: '300px', overflowY: 'auto', overflowX: 'hidden', height: '100%', background: '#f0f0f0' }}>
                 <Button
@@ -500,6 +523,7 @@ class Canvas extends React.Component {
                 {Object.entries(masks).map(([key, mask]) => (
                     <div key={key} style={{ padding: '10px', borderBottom: '1px solid #ccc', pointerEvents: manualSelectionActive ? 'none' : 'auto', opacity: manualSelectionActive ? 0.5 : 1 }}>
                         <div onClick={() => this.toggleMaskExpansion(key)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                            <div style={{ width: 20, height: 20, backgroundColor: maskColors[key], marginRight: 10 }}></div>
                             <Typography variant="h6" style={{ flexGrow: 1 }}>Edit {Number(key) + 1}</Typography>
                             {expandedMasks[key] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                         </div>
@@ -565,7 +589,7 @@ class Canvas extends React.Component {
         );
     }    
     render() {
-        const { windowSize, isLoading, vertices, stageWidth, stageHeight, imageWidth, imageHeight} = this.state;
+        const { windowSize, isLoading, vertices, stageWidth, stageHeight, imageWidth, imageHeight, maskColors} = this.state;
     
         return (
             <div
@@ -576,6 +600,7 @@ class Canvas extends React.Component {
                     justifyContent: 'center', 
                     alignItems: 'center',
                     position: 'relative',
+                    backgroundColor: '#f5f5f5',
                     pointerEvents: this.state.isLoading ? 'none' : 'auto',
                 }}
             >
@@ -625,24 +650,23 @@ class Canvas extends React.Component {
                             )}
                         </Layer>
                         <Layer>
-                            {this.props.visualizeVertices && Object.entries(vertices).map(([key, verticesArray]) => (
+                            {this.props.visualizeVertices && Object.entries(this.state.vertices).map(([key, verticesArray]) => (
                                 <React.Fragment key={key}>
                                     <Line
                                         points={verticesArray.flatMap(vertex => [vertex[1], vertex[0]])}
                                         closed
                                         fill="rgba(0, 0, 0, 0.65)"
-                                        stroke="black"
+                                        stroke={this.state.maskColors[key]}
                                         strokeWidth={5}
                                     />
                                     {verticesArray.map((vertex, index) => (
                                         <Circle
                                             key={index}
-                                            data-key={key}
-                                            x={parseInt(vertex[1])}
-                                            y={parseInt(vertex[0])}
+                                            x={vertex[1]}
+                                            y={vertex[0]}
                                             draggable
                                             radius={10}
-                                            fill="red"
+                                            fill={maskColors[key]}
                                             onDragMove={event => this.handleDragMove(key, index, event)}
                                             onDragEnd={event => this.handleDragEnd(key, index, event)}
                                         />
@@ -650,6 +674,7 @@ class Canvas extends React.Component {
                                 </React.Fragment>
                             ))}
                         </Layer>
+
                     </Stage>
                 </div>
             </div>

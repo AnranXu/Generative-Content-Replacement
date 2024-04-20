@@ -37,7 +37,7 @@ class Menu extends React.Component {
 
   render() {
     return (
-      <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '25px' }}>
         <Stack direction="row" justifyContent="space-around" alignItems="center" spacing={10}>
           <div>
             <input type="file" id="upload" onChange={this.handleUpload} style={{ display: 'none' }} />
