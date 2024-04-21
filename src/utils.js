@@ -1,5 +1,21 @@
 // utils.js
-
+export const vertexColors = [
+  '#FF5733', // Red
+  '#33FF57', // Green
+  '#3357FF', // Blue
+  '#FFFF33', // Yellow
+  '#FF33FF', // Magenta
+  '#33FFFF', // Cyan
+  '#FF7F50', // Coral
+  '#9370DB', // Medium Purple
+  '#FF6347', // Tomato
+  '#40E0D0', // Turquoise
+  '#EE82EE', // Violet
+  '#F5DEB3', // Wheat
+  '#6495ED', // Cornflower Blue
+  '#FFD700', // Gold
+  '#FFA500', // Orange
+];
 export const getWindowSize = () => ({
     width: window.innerWidth,
     height: window.innerHeight,

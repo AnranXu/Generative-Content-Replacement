@@ -1,6 +1,6 @@
 import React from 'react';
 import { Stage, Layer, Image, Circle, Line } from 'react-konva';
-import { getWindowSize, addResizeListener, removeResizeListener, getGCRImage} from './utils';
+import { vertexColors, getWindowSize, addResizeListener, removeResizeListener, getGCRImage} from './utils';
 import axios from 'axios';
 import { Stack } from "@mui/material";
 import { Typography, Slider, TextField, Button, Tooltip} from '@material-ui/core';
@@ -10,16 +10,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LoadingSpinner from './component/loading/LoadingSpinner';
 import './Canvas.css';
-const vertexColors = [
-    '#FF5733', // Red
-    '#33FF57', // Green
-    '#3357FF', // Blue
-    '#FFFF33', // Yellow
-    '#FF33FF', // Magenta
-    '#33FFFF', // Cyan
-    // Add more colors as needed
-];
-
 class Canvas extends React.Component {
     //initialize the class
     constructor(props) {
