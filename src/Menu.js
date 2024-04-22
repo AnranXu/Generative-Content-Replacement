@@ -52,7 +52,7 @@ class Menu extends React.Component {
     const centerPartWidth = this.state.windowWidth - 300; // Total width minus the left part
     return (
       <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', padding: '25px', width: '100%' }}>
-        {/* <div style={{ width: '300px', paddingRight: '150px', position: 'absolute', left: '10px'}}>
+        <div style={{ width: '300px', paddingRight: '150px', position: 'absolute', left: '10px'}}>
           <Stack direction="row" justifyContent="center" alignItems="center" spacing={3}>
               <Stack direction="column" alignItems="center" spacing={1}>
                 <img src={require('./imgs/anran_website.png')} alt="Anran Xu QR Code" style={{ width: '50px', height: '50px' }} />
@@ -67,7 +67,7 @@ class Menu extends React.Component {
                 <Typography variant="caption">SOUPS 2024</Typography>
               </Stack>
           </Stack>
-        </div> */}
+        </div>
         <Stack direction="row" justifyContent="center" alignItems="center" spacing={10} style={{ width: `${centerPartWidth}px`, marginLeft: '150px' }}>
           <div>
             <input type="file" id="upload" onChange={this.handleUpload} style={{ display: 'none' }} />
