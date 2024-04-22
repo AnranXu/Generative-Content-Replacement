@@ -1,4 +1,12 @@
 // utils.js
+const queryParams = new URLSearchParams(window.location.search);
+export const apiIP = queryParams.get('GCR_Server_IP');
+// if not specified, raise an warning
+if (apiIP === null) {
+  console.warn('No GCR_Server_IP specified in the URL. Defaulting to localhost.');
+  // tell the setting method
+  console.warn('Please specify the GCR_Server_IP in the URL such like http://http://localhost:3000/?GCR_Server_IP=your_server_ip.');
+}
 export const vertexColors = [
   '#FF5733', // Red
   '#33FF57', // Green

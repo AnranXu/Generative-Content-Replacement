@@ -1,6 +1,6 @@
 import React from 'react';
 import { Stage, Layer, Image, Circle, Line } from 'react-konva';
-import { vertexColors, getWindowSize, addResizeListener, removeResizeListener, getGCRImage} from './utils';
+import { apiIP, vertexColors, getWindowSize, addResizeListener, removeResizeListener, getGCRImage} from './utils';
 import axios from 'axios';
 import { Stack } from "@mui/material";
 import { Typography, Slider, TextField, Button, Tooltip} from '@material-ui/core';
@@ -166,7 +166,7 @@ class Canvas extends React.Component {
             text_strength: this.state.promptAlignment[key],
             prompt: this.state.prompts[key] || '',
         };
-        axios.post('http://10.9.5.200:5000/api/run_GCR', postData)
+        axios.post(`http://${apiIP}:5000/api/run_GCR`, postData)
         .then(response => {
             var GCRImage = response.data.GCRImage;
             var prompt = response.data.prompt;
@@ -275,7 +275,7 @@ class Canvas extends React.Component {
                 point: point,
                 img: this.state.dataURL
             };
-            axios.post('http://10.9.5.200:5000/api/create_mask', postData)
+            axios.post(`http://${apiIP}:5000/api/create_mask`, postData)
             .then(response => {
                 const { vertices, mask } = response.data;
                 const newMasks = {...this.state.masks}; // Ensure not mutating state directly

@@ -31,3 +31,7 @@ Turn on another bash for the frontend
 ```bash
 npm run start
 ```
+Then, go to your broswer with the below address (do not forget to specify the ip of your PC or server that deploy GCR):
+```bash
+http://localhost:3000/?GCR_Server_IP=your_server_ip
+```
