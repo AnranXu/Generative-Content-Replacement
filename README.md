@@ -19,6 +19,10 @@ conda create -n GCR python=3.10
 conda activate GCR
 pip install -r requirements.txt
 conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+cd backend
+mkdir pretrained_models
+cd pretrained_models
+wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 ```
 ### 3. Setting A Development Server To Try GCR
 **Please do not deploy the code to any public servers. We do not ensure the security of the code.**
