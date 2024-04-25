@@ -62,10 +62,10 @@ class Menu extends React.Component {
                 <img src={require('./imgs/CHI_paper.png')} alt="CHI 2024 QR Code" style={{ width: '50px', height: '50px' }} />
                 <Typography variant="caption">CHI 2024</Typography>
               </Stack>
-              <Stack direction="column" alignItems="center" spacing={1}>
+              {/* <Stack direction="column" alignItems="center" spacing={1}>
                 <img src="path/to/soups2024_qr_code.png" alt="SOUPS 2024 QR Code" style={{ width: '50px', height: '50px' }} />
                 <Typography variant="caption">SOUPS 2024</Typography>
-              </Stack>
+              </Stack> */}
           </Stack>
         </div>
         <Stack direction="row" justifyContent="center" alignItems="center" spacing={10} style={{ width: `${centerPartWidth}px`, marginLeft: '150px' }}>
