@@ -1,6 +1,6 @@
 ## Generative-Content-Replacement
-This is the interface for the generative content replacement (GCR), for SOUPS 2024 poster. 
-For details of GCR, CHI 2024 paper "Examining Human Perception of Generative Content Replacement in Image Privacy Protection".
+This is the interface for the trying generative content replacement (GCR), for CHI 2024 and SOUPS 2024 poster. 
+For details of GCR implementation, please refers to our CHI 2024 paper "Examining Human Perception of Generative Content Replacement in Image Privacy Protection".
 
 ## Getting started
 ### 1. Prerequisite 
