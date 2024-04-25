@@ -13,10 +13,8 @@ Nodejs, Anaconda
 git clone https://github.com/AnranXu/Generative-Content-Replacement.git
 ```
 ```bash
-npm install
-```
-```bash
 cd Generative-Content-Replacement
+npm install
 conda create -n GCR python=3.10
 conda activate GCR
 pip install -r requirements.txt
