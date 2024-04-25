@@ -403,8 +403,11 @@ class Canvas extends React.Component {
             similarity: newSimilarity,
             promptAlignment: newPromptAlignment,
             expandedMasks: newExpandedMasks,
-            mergedMask: newMergedMask
+            mergedMask: newMergedMask,   
+        }, ()=> {
+            this.layerRef.current.batchDraw();
         });
+        
     };     
     generateMask = (vertices, imageWidth, imageHeight) => {
         // Initialize a new mask array with the same dimensions as the image or canvas
