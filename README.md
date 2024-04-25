@@ -6,8 +6,7 @@ For details of GCR implementation, please refers to our CHI 2024 paper "Examinin
 
 ## Getting started
 ### 1. Prerequisite 
-A GPU with >24Gb VRAM, 32Gb DRAM, 100Gb Storage
-Nodejs, Anaconda
+A GPU with >24Gb VRAM, 32Gb DRAM, 100Gb Storage, Nodejs, Anaconda
 ### 2. Installation
 ```bash
 git clone https://github.com/AnranXu/Generative-Content-Replacement.git
