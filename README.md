@@ -1,6 +1,6 @@
 ## Generative-Content-Replacement
 This is the interface for the trying generative content replacement (GCR), for CHI 2024 and SOUPS 2024 poster. 
-For details of GCR implementation, please refers to our ![CHI 2024 paper](https://doi.org/10.1145/3613904.3642103) "Examining Human Perception of Generative Content Replacement in Image Privacy Protection".
+For details of GCR implementation, please refers to our [CHI 2024 paper](https://doi.org/10.1145/3613904.3642103) "Examining Human Perception of Generative Content Replacement in Image Privacy Protection".
 ## Interface Layout
 ![Interface](https://github.com/AnranXu/Generative-Content-Replacement/assets/24409860/d4243f2c-0d1d-40e1-a5f0-2946c64e1fbe)
 
