@@ -13,7 +13,7 @@ argparser = argparse.ArgumentParser()
 argparser.add_argument('--device', type=str, default='cuda')
 app = Flask(__name__)
 CORS(app)
-DMBIS = DMBIS(device=argparser.parse_args().device)
+DMBIS = DMBIS(device=argparser.parse_args().device, mode='sd3')
 
 def create_mask(vertices, image_width, image_height):
     # Create an empty mask
