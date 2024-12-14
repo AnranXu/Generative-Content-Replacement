@@ -19,4 +19,6 @@ albumentations
 kornia
 chardet
 
-
+On MacOS:
+libtools
+gettext
